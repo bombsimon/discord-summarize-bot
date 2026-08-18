@@ -1,0 +1,21 @@
+[project]
+name = "discord-summarize-bot"
+version = "0.1.0"
+description = "A bot that summarizes Discord messages"
+readme = "README.md"
+authors = [
+    { name = "Simon Sawert", email = "simon@sawert.se" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "discord-py>=2.7.1",
+    "ollama>=0.6.2",
+    "python-dotenv>=1.2.3",
+]
+
+[project.scripts]
+discord-summarize-bot = "discord_summarize_bot:main"
+
+[build-system]
+requires = ["uv_build>=0.12.3,<0.13.0"]
+build-backend = "uv_build"
