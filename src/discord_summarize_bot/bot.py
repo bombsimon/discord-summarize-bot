@@ -8,11 +8,17 @@ import discord
 from discord_summarize_bot.summarizer import Summarizer
 
 MENTION_PATTERN = re.compile(r"<@!?\d+>")
-COMMAND_PATTERN = re.compile(r"last\s+(\d+)\s+(minutes?|messages?)", re.IGNORECASE)
+COMMAND_PATTERN = re.compile(
+    r"last\s+(\d+)\s+(minutes?|hours?|days?|messages?)", re.IGNORECASE
+)
 HELP_PATTERN = re.compile(r"help", re.IGNORECASE)
-USAGE = "Mention me with `last N minutes` or `last N messages`, e.g. `@bot last 30 minutes`."
+USAGE = (
+    "Mention me with `last N minutes`, `last N hours`, `last N days`, or "
+    "`last N messages`, e.g. `@bot last 2 hours`."
+)
 
 DISCORD_MESSAGE_LIMIT = 2000
+MINUTES_PER_TIME_UNIT = {"minute": 1, "hour": 60, "day": 60 * 24}
 
 
 class SummarizeBot(discord.Client):
@@ -48,14 +54,20 @@ class SummarizeBot(discord.Client):
             return
 
         amount = int(match.group(1))
-        unit = match.group(2).lower()
+        unit_word = match.group(2).lower().rstrip("s")
         if amount <= 0:
             return
 
-        amount, cap_note = self._cap_amount(amount, unit)
+        is_messages = unit_word == "message"
+        if not is_messages:
+            amount *= MINUTES_PER_TIME_UNIT[unit_word]
+
+        amount, cap_note = self._cap_amount(amount, is_messages=is_messages)
 
         async with message.channel.typing():
-            history = await self._fetch_history(message, amount, unit)
+            history = await self._fetch_history(
+                message, amount, is_messages=is_messages
+            )
             transcript = self._build_transcript(history)
 
             if not transcript:
@@ -71,31 +83,25 @@ class SummarizeBot(discord.Client):
         for chunk in chunks:
             await message.reply(chunk)
 
-    def _cap_amount(self, amount: int, unit: str) -> tuple[int, str | None]:
-        if unit.startswith("minute") and amount > self._max_lookback_minutes:
+    def _cap_amount(self, amount: int, *, is_messages: bool) -> tuple[int, str | None]:
+        if is_messages:
+            if amount > self._max_history_limit:
+                return self._max_history_limit, (
+                    f"-# Capped to the last {self._max_history_limit} messages."
+                )
+            return amount, None
+
+        if amount > self._max_lookback_minutes:
             return self._max_lookback_minutes, (
                 f"-# Capped lookback to {self._max_lookback_minutes} minutes."
-            )
-
-        if unit.startswith("message") and amount > self._max_history_limit:
-            return self._max_history_limit, (
-                f"-# Capped to the last {self._max_history_limit} messages."
             )
 
         return amount, None
 
     async def _fetch_history(
-        self, message: discord.Message, amount: int, unit: str
+        self, message: discord.Message, amount: int, *, is_messages: bool
     ) -> list[discord.Message]:
-        if unit.startswith("minute"):
-            after = discord.utils.utcnow() - timedelta(minutes=amount)
-            history = [
-                entry
-                async for entry in message.channel.history(
-                    after=after, limit=self._max_history_limit, oldest_first=True
-                )
-            ]
-        else:
+        if is_messages:
             history = [
                 entry
                 async for entry in message.channel.history(
@@ -103,6 +109,14 @@ class SummarizeBot(discord.Client):
                 )
             ]
             history.reverse()
+        else:
+            after = discord.utils.utcnow() - timedelta(minutes=amount)
+            history = [
+                entry
+                async for entry in message.channel.history(
+                    after=after, limit=self._max_history_limit, oldest_first=True
+                )
+            ]
 
         return [
             entry

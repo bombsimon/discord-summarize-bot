@@ -7,6 +7,8 @@ Mention the bot with one of:
 
 ```sh
 @bot last 30 minutes
+@bot last 2 hours
+@bot last 3 days
 @bot last 50 messages
 ```
 
