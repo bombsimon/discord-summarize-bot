@@ -34,20 +34,34 @@ model, and replies with a short, dense TL;DR in bullet points.
      `Send Messages` / `Read Message History` permissions, then use the
      generated URL to invite the bot to your server.
 
-3. Make sure Ollama is running locally and has the model pulled, e.g.:
+3. Choose a summary provider:
 
-   ```sh
-   ollama pull gemma4:26b
-   ```
+   - **Ollama** (default) - runs a model locally. Make sure Ollama is
+     running and has the model pulled, e.g.:
+
+     ```sh
+     ollama pull gemma3:27b
+     ```
+
+   - **Gemini** - calls the Gemini API instead, no local model needed.
+     Get an API key from [Google AI Studio](https://aistudio.google.com/apikey).
 
 4. Create a `.env` file in the project root:
 
    ```sh
    DISCORD_TOKEN=your-bot-token
-   OLLAMA_MODEL=gemma4:26b             # optional, defaults to gemma4:26b
-   OLLAMA_HOST=http://localhost:11434  # optional
-   MAX_HISTORY_LIMIT=500               # optional, caps how many messages are fetched
-   MAX_LOOKBACK_MINUTES=43200          # optional, caps "last N minutes" (default 30 days)
+   SUMMARY_PROVIDER=ollama              # optional, "ollama" (default) or "gemini"
+
+   # Used when SUMMARY_PROVIDER=ollama
+   OLLAMA_MODEL=gemma3:27b              # optional, defaults to gemma3:27b
+   OLLAMA_HOST=http://localhost:11434   # optional
+
+   # Used when SUMMARY_PROVIDER=gemini
+   GEMINI_API_KEY=your-gemini-api-key   # required when SUMMARY_PROVIDER=gemini
+   GEMINI_MODEL=gemini-3.5-flash-lite   # optional, defaults to gemini-3.5-flash-lite
+
+   MAX_HISTORY_LIMIT=500                # optional, caps how many messages are fetched
+   MAX_LOOKBACK_MINUTES=43200           # optional, caps "last N minutes" (default 30 days)
    ```
 
 5. Run the bot:
