@@ -9,6 +9,7 @@ from discord_summarize_bot.summarizer import Summarizer
 
 MENTION_PATTERN = re.compile(r"<@!?\d+>")
 COMMAND_PATTERN = re.compile(r"last\s+(\d+)\s+(minutes?|messages?)", re.IGNORECASE)
+HELP_PATTERN = re.compile(r"help", re.IGNORECASE)
 USAGE = "Mention me with `last N minutes` or `last N messages`, e.g. `@bot last 30 minutes`."
 
 DISCORD_MESSAGE_LIMIT = 2000
@@ -37,15 +38,18 @@ class SummarizeBot(discord.Client):
             return
 
         stripped = MENTION_PATTERN.sub("", message.content).strip()
-        match = COMMAND_PATTERN.search(stripped)
-        if match is None:
+
+        if HELP_PATTERN.fullmatch(stripped):
             await message.reply(USAGE)
+            return
+
+        match = COMMAND_PATTERN.fullmatch(stripped)
+        if match is None:
             return
 
         amount = int(match.group(1))
         unit = match.group(2).lower()
         if amount <= 0:
-            await message.reply(USAGE)
             return
 
         amount, cap_note = self._cap_amount(amount, unit)
